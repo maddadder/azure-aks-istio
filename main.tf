@@ -69,7 +69,7 @@ data "azurerm_subscription" "current" {
 
 resource "local_file" "kube_config" {
   content    = azurerm_kubernetes_cluster.aks.kube_admin_config_raw
-  filename   = ".kube/config"   
+  filename   = "kube-cluster/config"   
 }
 
 
@@ -80,7 +80,7 @@ resource "null_resource" "set-kube-config" {
 
   provisioner "local-exec" {
     working_dir = "${path.module}"
-    command = "az aks get-credentials -n ${azurerm_kubernetes_cluster.aks.name} -g ${azurerm_resource_group.rg.name} --file .kube/${azurerm_kubernetes_cluster.aks.name} --admin --overwrite-existing"
+    command = "az aks get-credentials -n ${azurerm_kubernetes_cluster.aks.name} -g ${azurerm_resource_group.rg.name} --file kube-cluster/${azurerm_kubernetes_cluster.aks.name} --admin --overwrite-existing"
   }
   depends_on = [local_file.kube_config]
 }
@@ -141,7 +141,7 @@ resource "null_resource" "istio" {
     always_run = "${timestamp()}"
   }
   provisioner "local-exec" {
-    command = "istioctl manifest apply -f .istio/istio-aks.yaml --skip-confirmation --kubeconfig .kube/${azurerm_kubernetes_cluster.aks.name}"
+    command = "istioctl manifest apply -f .istio/istio-aks.yaml --skip-confirmation --kubeconfig kube-cluster/${azurerm_kubernetes_cluster.aks.name}"
     working_dir = "${path.module}"
   }
   depends_on = [kubernetes_secret.grafana, kubernetes_secret.kiali, local_file.istio-config]
