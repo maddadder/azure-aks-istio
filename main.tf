@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "rg" {
   name     = "aks-resource-group"
-  location = "eastus"
+  location = "westus2"
 }
 
 resource "azurerm_virtual_network" "vnet" {
@@ -19,7 +19,8 @@ resource "azurerm_subnet" "subnet" {
 }
 
 resource "azuread_group" "aks-admin-group" {
-  name = "AKS-Aadmins"
+  display_name         = "AKS-Aadmins"
+  security_enabled = true
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
@@ -31,7 +32,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
     name                  = "default"
     vnet_subnet_id        = azurerm_subnet.subnet.id
     type                  = "VirtualMachineScaleSets"
-    availability_zones    = ["1", "2", "3"]
     enable_auto_scaling   = true
     enable_node_public_ip = false
     max_count             = 3
@@ -39,12 +39,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
     os_disk_size_gb       = 256
     vm_size               = "Standard_D2_v2"
   }
-  role_based_access_control {
-    enabled = true
-    azure_active_directory {
-      managed                = true
-      admin_group_object_ids = [azuread_group.aks-admin-group.id]
-    }
+  azure_active_directory_role_based_access_control {
+    managed                = true
+    admin_group_object_ids = [azuread_group.aks-admin-group.id]
+    azure_rbac_enabled     = true
   }
   identity {
     type = "SystemAssigned"
@@ -52,26 +50,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
   network_profile {
     network_plugin    = "azure"
     network_policy    = "azure"
-    load_balancer_sku = "Standard"
+    load_balancer_sku = "standard"
   }
-
-  addon_profile {
-    aci_connector_linux {
-      enabled = false
-    }
-
-    azure_policy {
-      enabled = true
-    }
-
-    http_application_routing {
-      enabled = false
-    }
-
-    kube_dashboard {
-      enabled = true
-    }
-  }
+  
+  azure_policy_enabled = true
+  http_application_routing_enabled = true
 }
 
 ###################Install Istio (Service Mesh) #######################################
@@ -96,7 +79,8 @@ resource "null_resource" "set-kube-config" {
   }
 
   provisioner "local-exec" {
-    command = "az aks get-credentials -n ${azurerm_kubernetes_cluster.aks.name} -g ${azurerm_resource_group.rg.name} --file \".kube/${azurerm_kubernetes_cluster.aks.name}\" --admin --overwrite-existing"
+    working_dir = "${path.module}"
+    command = "az aks get-credentials -n ${azurerm_kubernetes_cluster.aks.name} -g ${azurerm_resource_group.rg.name} --file .kube/${azurerm_kubernetes_cluster.aks.name} --admin --overwrite-existing"
   }
   depends_on = [local_file.kube_config]
 }
@@ -157,7 +141,8 @@ resource "null_resource" "istio" {
     always_run = "${timestamp()}"
   }
   provisioner "local-exec" {
-    command = "istioctl manifest apply -f \".istio/istio-aks.yaml\" --kubeconfig \".kube/${azurerm_kubernetes_cluster.aks.name}\""
+    command = "istioctl manifest apply -f .istio/istio-aks.yaml --skip-confirmation --kubeconfig .kube/${azurerm_kubernetes_cluster.aks.name}"
+    working_dir = "${path.module}"
   }
   depends_on = [kubernetes_secret.grafana, kubernetes_secret.kiali, local_file.istio-config]
 }

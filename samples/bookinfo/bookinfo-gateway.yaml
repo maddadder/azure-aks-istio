@@ -21,7 +21,7 @@ spec:
   hosts:
   - "*"
   gateways:
-  - bookinfo-gateway
+  - default/bookinfo-gateway
   http:
   - match:
     - uri:
