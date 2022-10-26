@@ -27,7 +27,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   name                = "aks"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  dns_prefix          = "someapplication"
+  dns_prefix          = "leenet"
   default_node_pool {
     name                  = "default"
     vnet_subnet_id        = azurerm_subnet.subnet.id
@@ -87,14 +87,14 @@ resource "null_resource" "set-kube-config" {
 
 
 resource "kubernetes_namespace" "istio_system" {
-  provider = kubernetes.local
+  provider = kubernetes
   metadata {
     name = "istio-system"
   }
 }
 
 resource "kubernetes_secret" "grafana" {
-  provider = kubernetes.local
+  provider = kubernetes
   metadata {
     name      = "grafana"
     namespace = "istio-system"
@@ -111,7 +111,7 @@ resource "kubernetes_secret" "grafana" {
 }
 
 resource "kubernetes_secret" "kiali" {
-  provider = kubernetes.local
+  provider = kubernetes
   metadata {
     name      = "kiali"
     namespace = "istio-system"
@@ -147,6 +147,15 @@ resource "null_resource" "istio" {
   depends_on = [kubernetes_secret.grafana, kubernetes_secret.kiali, local_file.istio-config]
 }
 
+
+module "cert_manager" {
+
+  source        = "terraform-iaac/cert-manager/kubernetes"
+
+  cluster_issuer_email                   = "someone@gmail.com"
+  cluster_issuer_name                    = "cert-manager-global"
+  cluster_issuer_private_key_secret_name = "lets-encrypt-production-dns"
+}
 
 ################### Deploy booking info sample application with gateway  #######################################
 
