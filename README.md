@@ -54,6 +54,9 @@ istio-ingressgateway   LoadBalancer   10.0.21.44   20.252.13.28   15021:32186/TC
 17. Setup your hosts file to point a dns name to the external ip listed in the prior step, e.g. `20.252.13.28	leenet.link`
 18. Navigate to http://leenet.link/productpage. If the page does not load then check to make sure all the deployments were actually deployed, make sure the pods are running, etc
 
+19. Open your environment variables from the vault via `neon tool vault edit terraform_env.txt` and paste in the contents of the secret that's in the format: `kubectl create secret generic -n istio-system route53-secret --from-literal=secret-access-key="YOUR_ACCESS_KEY_SECRET"`
+
+
 # azure-aks-istio
 
 https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/

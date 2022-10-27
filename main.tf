@@ -152,21 +152,53 @@ module "cert_manager" {
 
   source        = "terraform-iaac/cert-manager/kubernetes"
 
-  cluster_issuer_email                   = "someone@gmail.com"
+  cluster_issuer_email                   = "rleecharlie@gmail.com"
   cluster_issuer_name                    = "cert-manager-global"
   cluster_issuer_private_key_secret_name = "lets-encrypt-production-dns"
+}
+
+resource "helm_release" "my-kubernetes-dashboard" {
+
+  name = "my-kubernetes-dashboard"
+
+  repository = "https://kubernetes.github.io/dashboard/"
+  chart      = "kubernetes-dashboard"
+  namespace  = "default"
+
+  set {
+    name  = "service.externalPort"
+    value = 9090
+  }
+
+  set {
+    name  = "replicaCount"
+    value = 1
+  }
+
+  set {
+    name  = "rbac.clusterReadOnlyRole"
+    value = "true"
+  }
+
+  set {
+    name  = "extraArgs"
+    value = "{--enable-insecure-login=true,--insecure-bind-address=0.0.0.0,--insecure-port=9090}"
+  }
+
+  set {
+    name  = "protocolHttp"
+    value = true
+  }
 }
 
 ################### Deploy booking info sample application with gateway  #######################################
 
 // kubectl provider can be installed from here - https://gavinbunney.github.io/terraform-provider-kubectl/docs/provider.html 
 data "kubectl_filename_list" "manifests" {
-    pattern = "samples/bookinfo/*.yaml"
+    pattern = "samples/yaml/*.yaml"
 }
 
-// source of booking info application - https://istio.io/latest/docs/examples/bookinfo/
-
-resource "kubectl_manifest" "bookinginfo" {
+resource "kubectl_manifest" "yaml" {
     count = length(data.kubectl_filename_list.manifests.matches)
     yaml_body = file(element(data.kubectl_filename_list.manifests.matches, count.index))
 }
