@@ -4,17 +4,19 @@
 
 # Read Certificate
 data "azurerm_key_vault_secret" "vpn-root-certificate" {
+  count         = var.vpn_instance_count
   depends_on=[
     azurerm_key_vault.leenet-keyvault,
     azurerm_key_vault_secret.vpn-root-certificate
   ]
   
   name         = "vpn-root-certificate"
-  key_vault_id = azurerm_key_vault.leenet-keyvault.id
+  key_vault_id = azurerm_key_vault.leenet-keyvault[0].id
 }
 
 # Create a Public IP for the Gateway
 resource "azurerm_public_ip" "leenet-gateway-ip" {
+  count               = var.vpn_instance_count
   name                = "${var.region}-${var.environment}-${var.app_name}-gw-ip"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -23,6 +25,7 @@ resource "azurerm_public_ip" "leenet-gateway-ip" {
 
 # Create VPN Gateway
 resource "azurerm_virtual_network_gateway" "leenet-vpn-gateway" {
+  count               = var.vpn_instance_count
   name                = "${var.region}-${var.environment}-${var.app_name}-gw"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -36,9 +39,9 @@ resource "azurerm_virtual_network_gateway" "leenet-vpn-gateway" {
 
   ip_configuration {
     name                          = "${var.region}-${var.environment}-${var.app_name}-vnet"
-    public_ip_address_id          = azurerm_public_ip.leenet-gateway-ip.id
+    public_ip_address_id          = azurerm_public_ip.leenet-gateway-ip[0].id
     private_ip_address_allocation = "Dynamic"
-    subnet_id                     = azurerm_subnet.leenet-gateway-subnet.id
+    subnet_id                     = azurerm_subnet.leenet-gateway-subnet[0].id
   }
 
   vpn_client_configuration {
@@ -47,7 +50,7 @@ resource "azurerm_virtual_network_gateway" "leenet-vpn-gateway" {
     root_certificate {
       name = "VPNROOT"
 
-      public_cert_data = data.azurerm_key_vault_secret.vpn-root-certificate.value
+      public_cert_data = data.azurerm_key_vault_secret.vpn-root-certificate[0].value
     }
 
   }

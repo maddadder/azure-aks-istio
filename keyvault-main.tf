@@ -6,6 +6,7 @@ data "azurerm_client_config" "current" {}
 
 # Create the Azure Key Vault - globally unique - 24 characters max
 resource "azurerm_key_vault" "leenet-keyvault" {
+  count               = var.vpn_instance_count
   name                = "${var.region}-${var.environment}-${var.app_name}-kv"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name

@@ -16,6 +16,7 @@ resource "azurerm_virtual_network" "leenet-vnet" {
 
 # Create a Gateway Subnet
 resource "azurerm_subnet" "leenet-gateway-subnet" {
+  count                = var.vpn_instance_count
   name                 = "GatewaySubnet" # do not rename
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.leenet-vnet.name
@@ -36,6 +37,7 @@ resource "azuread_group" "aks-admin-group" {
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
+  count               = var.aks_instance_count
   name                = "aks"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -78,28 +80,32 @@ resource "random_password" "password" {
 }
 
 data "azurerm_subscription" "current" {
+
 }
 
 resource "local_file" "kube_config" {
-  content    = azurerm_kubernetes_cluster.aks.kube_admin_config_raw
+  count               = var.aks_instance_count
+  content    = azurerm_kubernetes_cluster.aks[0].kube_admin_config_raw
   filename   = "kube-cluster/config"   
 }
 
 
 resource "null_resource" "set-kube-config" {
+  count               = var.aks_instance_count
   triggers = {
     always_run = "${timestamp()}"
   }
 
   provisioner "local-exec" {
     working_dir = "${path.module}"
-    command = "az aks get-credentials -n ${azurerm_kubernetes_cluster.aks.name} -g ${azurerm_resource_group.rg.name} --file kube-cluster/${azurerm_kubernetes_cluster.aks.name} --admin --overwrite-existing"
+    command = "az aks get-credentials -n ${azurerm_kubernetes_cluster.aks[0].name} -g ${azurerm_resource_group.rg.name} --file kube-cluster/${azurerm_kubernetes_cluster.aks[0].name} --admin --overwrite-existing"
   }
   depends_on = [local_file.kube_config]
 }
 
 
 resource "kubernetes_namespace" "istio_system" {
+  count               = var.aks_instance_count
   provider = kubernetes
   metadata {
     name = "istio-system"
@@ -107,6 +113,7 @@ resource "kubernetes_namespace" "istio_system" {
 }
 
 resource "kubernetes_secret" "grafana" {
+  count               = var.aks_instance_count
   provider = kubernetes
   metadata {
     name      = "grafana"
@@ -124,6 +131,7 @@ resource "kubernetes_secret" "grafana" {
 }
 
 resource "kubernetes_secret" "kiali" {
+  count               = var.aks_instance_count
   provider = kubernetes
   metadata {
     name      = "kiali"
@@ -141,6 +149,7 @@ resource "kubernetes_secret" "kiali" {
 }
 
 resource "local_file" "istio-config" {
+  count               = var.aks_instance_count
   content = templatefile("${path.module}/istio-aks.tmpl", {
     enableGrafana = true
     enableKiali   = true
@@ -150,11 +159,12 @@ resource "local_file" "istio-config" {
 }
 
 resource "null_resource" "istio" {
+  count               = var.aks_instance_count
   triggers = {
     always_run = "${timestamp()}"
   }
   provisioner "local-exec" {
-    command = "istioctl manifest apply -f .istio/istio-aks.yaml --skip-confirmation --kubeconfig kube-cluster/${azurerm_kubernetes_cluster.aks.name}"
+    command = "istioctl manifest apply -f .istio/istio-aks.yaml --skip-confirmation --kubeconfig kube-cluster/${azurerm_kubernetes_cluster.aks[0].name}"
     working_dir = "${path.module}"
   }
   depends_on = [kubernetes_secret.grafana, kubernetes_secret.kiali, local_file.istio-config]
@@ -162,7 +172,7 @@ resource "null_resource" "istio" {
 
 
 module "cert_manager" {
-
+  count               = var.aks_instance_count
   source        = "terraform-iaac/cert-manager/kubernetes"
 
   cluster_issuer_email                   = "rleecharlie@gmail.com"
@@ -171,7 +181,7 @@ module "cert_manager" {
 }
 
 resource "helm_release" "my-kubernetes-dashboard" {
-
+  count               = var.aks_instance_count
   name = "my-kubernetes-dashboard"
 
   repository = "https://kubernetes.github.io/dashboard/"
@@ -208,10 +218,11 @@ resource "helm_release" "my-kubernetes-dashboard" {
 
 // kubectl provider can be installed from here - https://gavinbunney.github.io/terraform-provider-kubectl/docs/provider.html 
 data "kubectl_filename_list" "manifests" {
+    count               = var.aks_instance_count
     pattern = "samples/yaml/*.yaml"
 }
 
 resource "kubectl_manifest" "yaml" {
-    count = length(data.kubectl_filename_list.manifests.matches)
-    yaml_body = file(element(data.kubectl_filename_list.manifests.matches, count.index))
+    count = var.aks_instance_count > 0 ? length(data.kubectl_filename_list.manifests[0].matches) : 0
+    yaml_body = var.aks_instance_count > 0 ? file(element(data.kubectl_filename_list.manifests[0].matches, count.index)) : ""
 }

@@ -37,3 +37,11 @@ variable "environment" {
   type        = string
   description = "This variable defines the environment to be built"
 }
+
+variable "vpn_instance_count" {
+  default = 1
+}
+
+variable "aks_instance_count" {
+  default = 1
+}

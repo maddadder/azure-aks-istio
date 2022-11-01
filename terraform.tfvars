@@ -12,3 +12,5 @@ region      = "westus2"
 # Key Vault #
 #############
 kv-sku-name = "premium"
+vpn_instance_count = 0
+aks_instance_count = 1
