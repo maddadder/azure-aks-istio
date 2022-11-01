@@ -1,20 +1,32 @@
 resource "azurerm_resource_group" "rg" {
   name     = "aks-resource-group"
-  location = "westus2"
+  location = var.region
 }
 
-resource "azurerm_virtual_network" "vnet" {
-  name                = "aks-vnet"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  address_space       = ["192.168.0.0/16"]
+# Create the VNET
+resource "azurerm_virtual_network" "leenet-vnet" {
+  name                = "${var.region}-${var.environment}-${var.app_name}-vnet"
+  address_space       = ["10.10.0.0/16"]
+  location              = azurerm_resource_group.rg.location
+  resource_group_name   = azurerm_resource_group.rg.name
+  tags = {
+    environment = var.environment
+  }
 }
 
-resource "azurerm_subnet" "subnet" {
+# Create a Gateway Subnet
+resource "azurerm_subnet" "leenet-gateway-subnet" {
+  name                 = "GatewaySubnet" # do not rename
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.leenet-vnet.name
+  address_prefixes     = ["10.10.0.0/24"]
+}
+
+resource "azurerm_subnet" "aks-subnet" {
   name                 = "aks-subnet"
   resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["192.168.1.0/24"]
+  virtual_network_name = azurerm_virtual_network.leenet-vnet.name
+  address_prefixes     = ["10.10.16.0/20"]
   service_endpoints    = ["Microsoft.ContainerRegistry"]
 }
 
@@ -27,10 +39,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
   name                = "aks"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  dns_prefix          = "leenet"
+  dns_prefix          = var.prefix
   default_node_pool {
     name                  = "default"
-    vnet_subnet_id        = azurerm_subnet.subnet.id
+    vnet_subnet_id        = azurerm_subnet.aks-subnet.id
     type                  = "VirtualMachineScaleSets"
     enable_auto_scaling   = true
     enable_node_public_ip = false
@@ -38,6 +50,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     min_count             = 1
     os_disk_size_gb       = 256
     vm_size               = "Standard_D2_v2"
+    max_pods              = 250
   }
   azure_active_directory_role_based_access_control {
     managed                = true
@@ -191,7 +204,7 @@ resource "helm_release" "my-kubernetes-dashboard" {
   }
 }
 
-################### Deploy booking info sample application with gateway  #######################################
+################### Deploy yaml with gateway  #######################################
 
 // kubectl provider can be installed from here - https://gavinbunney.github.io/terraform-provider-kubectl/docs/provider.html 
 data "kubectl_filename_list" "manifests" {

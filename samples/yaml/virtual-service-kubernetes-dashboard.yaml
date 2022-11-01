@@ -6,7 +6,7 @@ spec:
   hosts:
   - "leenet.link"
   gateways:
-  - default/my-gateway
+  - istio-system/my-gateway
   http:
   - match:
     - uri:
