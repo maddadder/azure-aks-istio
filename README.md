@@ -57,8 +57,17 @@ istio-ingressgateway   LoadBalancer   10.0.21.44   20.252.13.28   15021:32186/TC
 ```
 20. Setup your hosts file to point a dns name to the external ip listed in the prior step, e.g. `20.252.13.28	leenet.link`
 21. Navigate to http://leenet.link. If the page does not load then check to make sure all the deployments were actually deployed, make sure the pods are running, etc
-
-
+22. Push images to the registry
+```
+docker login leenetregistry.azurecr.io  # You can get the login URI and credentials from Access keys blade in the azure portal
+docker pull registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3
+docker tag registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3 leenetregistry.azurecr.io/jessie-dnsutils:1.3
+docker push leenetregistry.azurecr.io/jessie-dnsutils:1.3
+```
+23. Create the image pull secrets. For the `docker-password`, use the same credentials you used for docker login
+```
+kubectl create secret docker-registry leenet-registry --namespace default --docker-server=leenetregistry.azurecr.io --docker-username=leenetRegistry --docker-password=<service-principal-password>
+```
 
 # azure-aks-istio
 

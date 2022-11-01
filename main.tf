@@ -72,6 +72,23 @@ resource "azurerm_kubernetes_cluster" "aks" {
   http_application_routing_enabled = true
 }
 
+resource "azurerm_container_registry" "leenet-registry" {
+  count               = var.aks_instance_count
+  name                = "leenetRegistry"
+  admin_enabled       = true
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Basic"
+}
+
+resource "azurerm_role_assignment" "leenet-registry" {
+  count                            = var.aks_instance_count
+  principal_id                     = azurerm_kubernetes_cluster.aks[0].kubelet_identity[0].object_id
+  role_definition_name             = "AcrPull"
+  scope                            = azurerm_container_registry.leenet-registry[0].id
+  skip_service_principal_aad_check = true
+}
+
 ###################Install Istio (Service Mesh) #######################################
 resource "random_password" "password" {
   length           = 16
