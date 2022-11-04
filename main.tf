@@ -83,7 +83,7 @@ resource "azurerm_container_registry" "leenet-registry" {
 
 resource "azurerm_role_assignment" "leenet-registry" {
   count                            = var.aks_instance_count
-  principal_id                     = azurerm_kubernetes_cluster.aks[0].kubelet_identity[0].object_id
+  principal_id                     = azurerm_kubernetes_cluster.aks[0].kubelet_identity[0].object_id # OR data.azurerm_client_config.current.object_id
   role_definition_name             = "AcrPull"
   scope                            = azurerm_container_registry.leenet-registry[0].id
   skip_service_principal_aad_check = true

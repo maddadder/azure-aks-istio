@@ -72,3 +72,15 @@ kubectl create secret docker-registry leenet-registry --namespace default --dock
 # azure-aks-istio
 
 https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/
+
+
+## Troubleshooting
+1. If you get error: https://github.com/hashicorp/terraform-provider-azurerm/issues/11434
+```
+Error: authorization.RoleAssignmentsClient#Create: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="AuthorizationFailed" Message="The client '6a3b5a66-834a-4d27-afa1-9a69ac988626' with object id '6a3b5a66-834a-4d27-afa1-9a69ac988626' does not have authorization to perform action 'Microsoft.Authorization/roleAssignments/write' over scope '/subscriptions/c034446e-d5dc-4fb0-b1fd-a8404b71f6b8/resourceGroups/aks-resource-group/providers/Microsoft.ContainerRegistry/registries/leenetRegistry/providers/Microsoft.Authorization/roleAssignments/f0a5b065-1f5b-09c9-1b97-6fde9cd373be' or the scope is invalid. If access was recently granted, please refresh your credentials."
+│
+│   with azurerm_role_assignment.leenet-registry[0],
+│   on main.tf line 267, in resource "azurerm_role_assignment" "leenet-registry":
+│  267: resource "azurerm_role_assignment" "leenet-registry" {
+```
+2. ^ Then run the following command: `az aks update --name aks --resource-group aks-resource-group --attach-acr leenetRegistry`
