@@ -79,14 +79,17 @@ resource "azurerm_container_registry" "leenet-registry" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   sku                 = "Basic"
+  depends_on = [azurerm_kubernetes_cluster.aks]
+  
 }
 
-resource "azurerm_role_assignment" "leenet-registry" {
+resource "azurerm_role_assignment" "acrpull" {
   count                            = var.aks_instance_count
-  principal_id                     = azurerm_kubernetes_cluster.aks[0].kubelet_identity[0].object_id # OR data.azurerm_client_config.current.object_id
+  principal_id                     = azurerm_kubernetes_cluster.aks[0].kubelet_identity[0].object_id
   role_definition_name             = "AcrPull"
   scope                            = azurerm_container_registry.leenet-registry[0].id
   skip_service_principal_aad_check = true
+  depends_on = [azurerm_container_registry.leenet-registry]
 }
 
 ###################Install Istio (Service Mesh) #######################################
@@ -195,6 +198,7 @@ module "cert_manager" {
   cluster_issuer_email                   = "rleecharlie@gmail.com"
   cluster_issuer_name                    = "cert-manager-global"
   cluster_issuer_private_key_secret_name = "lets-encrypt-production-dns"
+  depends_on = [null_resource.istio]
 }
 
 resource "helm_release" "my-kubernetes-dashboard" {
@@ -229,6 +233,7 @@ resource "helm_release" "my-kubernetes-dashboard" {
     name  = "protocolHttp"
     value = true
   }
+  depends_on = [azurerm_role_assignment.acrpull]
 }
 
 ################### Deploy yaml with gateway  #######################################
@@ -242,4 +247,5 @@ data "kubectl_filename_list" "manifests" {
 resource "kubectl_manifest" "yaml" {
     count = var.aks_instance_count > 0 ? length(data.kubectl_filename_list.manifests[0].matches) : 0
     yaml_body = var.aks_instance_count > 0 ? file(element(data.kubectl_filename_list.manifests[0].matches, count.index)) : ""
+    depends_on = [azurerm_role_assignment.acrpull]
 }

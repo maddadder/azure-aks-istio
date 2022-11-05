@@ -39,32 +39,56 @@ set ARM_CLIENT_SECRET=<insert the password from above>
 10. Follow these instructions: https://stackoverflow.com/questions/70851465/azure-ad-group-authorization-requestdenied-insufficient-privileges-to-complet
 11. Rename your kube-cluster folder to kube-cluster.current so that you will only see what is imported in lens and so that if you have any other cluster setup it won't try and apply to your current k8s cluster
 12. Run the following from .\azure-aks-istio `pwsh -f generate-certificate.ps1`
-13. Run the following from .\azure-aks-istio `terraform init` if you haven't ran init yet, then:
+13. Go into azure and create a custom role via Access your subscription, IAM, Add, Custom Role, paste in the json in the json tab
+```
+{
+    "properties": {
+        "roleName": "role_assignment_write_delete",
+        "description": "Allow role to write and delete roles in this subscription",
+        "assignableScopes": [
+            "/subscriptions/<your-subscription-id>"
+        ],
+        "permissions": [
+            {
+                "actions": [
+                    "Microsoft.Authorization/roleAssignments/write",
+                    "Microsoft.Authorization/roleAssignments/delete"
+                ],
+                "notActions": [],
+                "dataActions": [],
+                "notDataActions": []
+            }
+        ]
+    }
+}
+```
+14. Add, Role Assignment, choose role role_assignment_write_delete, add members, search fore azure-cli, add the assignment
+15. Run the following from .\azure-aks-istio `terraform init` if you haven't ran init yet, then:
 ```
 terraform plan -var-file="terraform.tfvars"
 terraform apply
 ```
-14. Open your environment variables from the vault via `neon tool vault edit terraform_env.txt` and paste in the contents of the secret that's in the format: `kubectl create secret generic -n istio-system route53-secret --from-literal=secret-access-key="YOUR_ACCESS_KEY_SECRET"`
-16. Run terraform apply again
-15. Run `kubectl get Issuers,ClusterIssuers,Certificates,CertificateRequests,Orders,Challenges --all-namespaces` to get the status of the tls certificates. Once valid, you should be able to navigate to https://leenet.link and get a valid page. 
+16. Open your environment variables from the vault via `neon tool vault edit terraform_env.txt` and paste in the contents of the secret that's in the format: `kubectl create secret generic -n istio-system route53-secret --from-literal=secret-access-key="YOUR_ACCESS_KEY_SECRET"`
+17. Run terraform apply again, however, some of the dependencies need you to run steps 24) Push images to the registry before terraform apply will complete successfully
+18. Run `kubectl get Issuers,ClusterIssuers,Certificates,CertificateRequests,Orders,Challenges --all-namespaces` to get the status of the tls certificates. Once valid, you should be able to navigate to https://leenet.link and get a valid page. 
 
-17. Install Lens (https://k8slens.dev/)
-18. In Lens, File => Add Cluster, and paste in the `kubeconfig` file that was generated when you ran terraform apply
-19. In Lens: get the external ip via `kubectl get svc istio-ingressgateway -n istio-system`
+19. Install Lens (https://k8slens.dev/)
+20. In Lens, File => Add Cluster, and paste in the `kubeconfig` file that was generated when you ran terraform apply
+21. In Lens: get the external ip via `kubectl get svc istio-ingressgateway -n istio-system`
 ```
 NAME                   TYPE           CLUSTER-IP   EXTERNAL-IP    PORT(S)                                      AGE
 istio-ingressgateway   LoadBalancer   10.0.21.44   20.252.13.28   15021:32186/TCP,80:31502/TCP,443:30900/TCP   26m
 ```
-20. Setup your hosts file to point a dns name to the external ip listed in the prior step, e.g. `20.252.13.28	leenet.link`
-21. Navigate to http://leenet.link. If the page does not load then check to make sure all the deployments were actually deployed, make sure the pods are running, etc
-22. Push images to the registry
+22. Setup your hosts file to point a dns name to the external ip listed in the prior step, e.g. `20.252.13.28	leenet.link`
+23. Navigate to http://leenet.link. If the page does not load then check to make sure all the deployments were actually deployed, make sure the pods are running, etc
+24. Push images to the registry
 ```
 docker login leenetregistry.azurecr.io  # You can get the login URI and credentials from Access keys blade in the azure portal
 docker pull registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3
 docker tag registry.k8s.io/e2e-test-images/jessie-dnsutils:1.3 leenetregistry.azurecr.io/jessie-dnsutils:1.3
 docker push leenetregistry.azurecr.io/jessie-dnsutils:1.3
 ```
-23. Create the image pull secrets. For the `docker-password`, use the same credentials you used for docker login
+25. Create the image pull secrets. For the `docker-password`, use the same credentials you used for docker login
 ```
 kubectl create secret docker-registry leenet-registry --namespace default --docker-server=leenetregistry.azurecr.io --docker-username=leenetRegistry --docker-password=<service-principal-password>
 ```
