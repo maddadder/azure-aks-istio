@@ -1,6 +1,13 @@
 #  Setup terraform
 
-1. Docs are from https://learnk8s.io/terraform-aks
+1. Docs are from https://learnk8s.io/terraform-aks and 
+1. Follow the steps before creating the secret access key in https://voyagermesh.com/docs/v2021.10.18/guides/cert-manager/dns01_challenge/aws-route53/. 
+> This includes Go to IAM page and:
+> 1. Creating the user
+> 2. Click on next and select Attach existing policies directly and click on Create Policy
+> 3. Click on json and paste this and click Review Policy
+> 4. Name the policy and click Create policy, 
+> 5. Instead of `Create a secret with the Secret Access Key`, just get the secret and paste it in the `terraform.tfvars` file under `route53-secret`.
 2. cd C:\git\azure-aks-istio
 3. install https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 ```
@@ -63,10 +70,10 @@ set ARM_CLIENT_SECRET=<insert the password from above>
 }
 ```
 14. Add, Role Assignment, choose role role_assignment_write_delete, add members, search fore azure-cli, add the assignment
-15. Run the following from .\azure-aks-istio `terraform init` if you haven't ran init yet, then:
+15. Run the following from .\azure-aks-istio `terraform init` if you haven't ran init yet, either rename terraform-example.tfvars to terraform.tfvars or use the -var-file parameter:
 ```
-terraform plan -var-file="terraform.tfvars"
-terraform apply
+terraform plan -var-file="terraform-example.tfvars"
+terraform apply -var-file="terraform-example.tfvars"
 ```
 16. Open your environment variables from the vault via `neon tool vault edit terraform_env.txt` and paste in the contents of the secret that's in the format: `kubectl create secret generic -n istio-system route53-secret --from-literal=secret-access-key="YOUR_ACCESS_KEY_SECRET"`
 17. Run terraform apply again, however, some of the dependencies need you to run steps 24) Push images to the registry before terraform apply will complete successfully
@@ -92,19 +99,11 @@ docker push leenetregistry.azurecr.io/jessie-dnsutils:1.3
 ```
 kubectl create secret docker-registry leenet-registry --namespace default --docker-server=leenetregistry.azurecr.io --docker-username=leenetRegistry --docker-password=<service-principal-password>
 ```
-
+26. Log into the couchbase cluster at `https://couchbase.leenet.link` and change the default password. Then go into the `my-couchbase` secret in the couchbase namespace and update it there too.
 # azure-aks-istio
 
 https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/
 
 
 ## Troubleshooting
-1. If you get error: https://github.com/hashicorp/terraform-provider-azurerm/issues/11434
-```
-Error: authorization.RoleAssignmentsClient#Create: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="AuthorizationFailed" Message="The client '6a3b5a66-834a-4d27-afa1-9a69ac988626' with object id '6a3b5a66-834a-4d27-afa1-9a69ac988626' does not have authorization to perform action 'Microsoft.Authorization/roleAssignments/write' over scope '/subscriptions/c034446e-d5dc-4fb0-b1fd-a8404b71f6b8/resourceGroups/aks-resource-group/providers/Microsoft.ContainerRegistry/registries/leenetRegistry/providers/Microsoft.Authorization/roleAssignments/f0a5b065-1f5b-09c9-1b97-6fde9cd373be' or the scope is invalid. If access was recently granted, please refresh your credentials."
-│
-│   with azurerm_role_assignment.leenet-registry[0],
-│   on main.tf line 267, in resource "azurerm_role_assignment" "leenet-registry":
-│  267: resource "azurerm_role_assignment" "leenet-registry" {
-```
-2. ^ Then run the following command: `az aks update --name aks --resource-group aks-resource-group --attach-acr leenetRegistry`
+1. To update a chart you can use Lens and run `helm list --namespace yournamespace` to find the chart and `helm uninstall --namespace yournamespace` and then run `terraform apply` to update the chart. It doesn't seem like terraform will reapply a chart once it's been installed.

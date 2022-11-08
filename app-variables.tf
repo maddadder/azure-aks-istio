@@ -38,6 +38,11 @@ variable "environment" {
   description = "This variable defines the environment to be built"
 }
 
+variable "route53-secret" {
+  type        = string
+  description = "The route53 secret. This variable should be stored in terraform.tfvars"
+}
+
 variable "vpn_instance_count" {
   default = 1
 }

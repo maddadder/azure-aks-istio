@@ -168,6 +168,35 @@ resource "kubernetes_secret" "kiali" {
   depends_on = [kubernetes_namespace.istio_system]
 }
 
+resource "kubernetes_secret" "cert-manager-route53-secret" {
+  metadata {
+    name = "route53-secret"
+    namespace = "cert-manager"
+  }
+
+  data = {
+    secret-access-key = var.route53-secret
+  }
+
+  type = "Opaque"
+  depends_on = [kubernetes_namespace.istio_system]
+}
+
+resource "kubernetes_secret" "istio-system-route53-secret" {
+  metadata {
+    name = "route53-secret"
+    namespace = "istio-system"
+  }
+
+  data = {
+    secret-access-key = var.route53-secret
+  }
+
+  type = "Opaque"
+  depends_on = [kubernetes_namespace.istio_system]
+}
+
+
 resource "local_file" "istio-config" {
   count               = var.aks_instance_count
   content = templatefile("${path.module}/istio-aks.tmpl", {
@@ -201,41 +230,6 @@ module "cert_manager" {
   depends_on = [null_resource.istio]
 }
 
-resource "helm_release" "my-kubernetes-dashboard" {
-  count               = var.aks_instance_count
-  name = "my-kubernetes-dashboard"
-
-  repository = "https://kubernetes.github.io/dashboard/"
-  chart      = "kubernetes-dashboard"
-  namespace  = "default"
-
-  set {
-    name  = "service.externalPort"
-    value = 9090
-  }
-
-  set {
-    name  = "replicaCount"
-    value = 1
-  }
-
-  set {
-    name  = "rbac.clusterReadOnlyRole"
-    value = "true"
-  }
-
-  set {
-    name  = "extraArgs"
-    value = "{--enable-insecure-login=true,--insecure-bind-address=0.0.0.0,--insecure-port=9090}"
-  }
-
-  set {
-    name  = "protocolHttp"
-    value = true
-  }
-  depends_on = [azurerm_role_assignment.acrpull]
-}
-
 ################### Deploy yaml with gateway  #######################################
 
 // kubectl provider can be installed from here - https://gavinbunney.github.io/terraform-provider-kubectl/docs/provider.html 
@@ -247,5 +241,5 @@ data "kubectl_filename_list" "manifests" {
 resource "kubectl_manifest" "yaml" {
     count = var.aks_instance_count > 0 ? length(data.kubectl_filename_list.manifests[0].matches) : 0
     yaml_body = var.aks_instance_count > 0 ? file(element(data.kubectl_filename_list.manifests[0].matches, count.index)) : ""
-    depends_on = [azurerm_role_assignment.acrpull]
+    depends_on = [helm_release.leenet-ingress]
 }
