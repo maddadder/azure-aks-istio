@@ -7,6 +7,10 @@ resource "helm_release" "my-kubernetes-dashboard" {
   chart      = "kubernetes-dashboard"
   namespace  = "default"
 
+  values = [
+    file("${abspath(path.root)}/charts/my-kubernetes-dashboard/values.yaml")
+  ]
+
   set {
     name  = "service.externalPort"
     value = 9090
@@ -36,9 +40,10 @@ resource "helm_release" "my-kubernetes-dashboard" {
 
 
 resource "helm_release" "leenet-ingress" {
+ namespace = "istio-system"
  name  = "leenet-ingress"
  chart = "${abspath(path.root)}/charts/leenet-ingress"
- depends_on = [module.cert_manager]
+ depends_on = [module.cert_manager, kubernetes_secret.istio-system-route53-secret]
 }
 
 resource "helm_release" "couchbase-operator" {

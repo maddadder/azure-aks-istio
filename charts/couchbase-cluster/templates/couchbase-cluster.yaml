@@ -42,15 +42,15 @@ spec:
       default: couchbase
     pod:
       spec:
-        #nodeSelector:
-        #  kubernetes.io/hostname: master-0
+        nodeSelector:
+          role: couchbase
   antiAffinity: false
   backup:
     image: couchbase/operator-backup:1.3.0 
     managed: true 
     serviceAccountName: couchbase-backup
-    #nodeSelector:
-    #  kubernetes.io/hostname: master-0
+    nodeSelector:
+      role: couchbase
   logging:
     server:
       enabled: true

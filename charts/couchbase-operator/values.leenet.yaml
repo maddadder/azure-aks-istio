@@ -1,3 +1,10 @@
 install:
   # -- Install couchbase cluster
   couchbaseCluster: false
+couchbaseOperator:
+  nodeSelector:
+    role: couchbase
+admissionController:
+  nodeSelector:
+    role: couchbase
+    

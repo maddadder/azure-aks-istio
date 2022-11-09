@@ -48,11 +48,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
     type                  = "VirtualMachineScaleSets"
     enable_auto_scaling   = true
     enable_node_public_ip = false
-    max_count             = 3
+    max_count             = 1
     min_count             = 1
     os_disk_size_gb       = 256
     vm_size               = "Standard_D2_v2"
     max_pods              = 250
+    node_labels = {
+      role = "master"
+    }
   }
   azure_active_directory_role_based_access_control {
     managed                = true
@@ -70,6 +73,32 @@ resource "azurerm_kubernetes_cluster" "aks" {
   
   azure_policy_enabled = true
   http_application_routing_enabled = true
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "worker" {
+  name                  = "worker"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks[0].id
+  vm_size               = "Standard_DS2_v2"
+  vnet_subnet_id        = azurerm_subnet.aks-subnet.id
+  max_count             = 1
+  min_count             = 1
+  enable_auto_scaling   = true
+  node_labels = {
+    role = "worker"
+  }
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "couchbase" {
+  name                  = "couchbase"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks[0].id
+  vm_size               = "Standard_DS2_v2"
+  vnet_subnet_id        = azurerm_subnet.aks-subnet.id
+  max_count             = 1
+  min_count             = 1
+  enable_auto_scaling   = true
+  node_labels = {
+    role = "couchbase"
+  }
 }
 
 resource "azurerm_container_registry" "leenet-registry" {
@@ -129,6 +158,13 @@ resource "kubernetes_namespace" "istio_system" {
   provider = kubernetes
   metadata {
     name = "istio-system"
+  }
+}
+
+resource "kubernetes_namespace" "cert_manager" {
+  provider = kubernetes
+  metadata {
+    name = "cert-manager"
   }
 }
 
