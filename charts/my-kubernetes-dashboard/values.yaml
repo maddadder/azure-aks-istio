@@ -1,2 +1,12 @@
 nodeSelector:
   role: worker
+service:
+  externalPort: 9090
+replicaCount: 1
+rbac:
+  clusterReadOnlyRole: true
+extraArgs:
+  - --enable-insecure-login
+  - --insecure-bind-address=0.0.0.0
+  - --insecure-port=9090
+protocolHttp: true

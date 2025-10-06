@@ -13,7 +13,7 @@ spec:
     solvers:
       - dns01:
           route53:
-            accessKeyID: AKIA5N475DMNNQRKFCF3
+            accessKeyID: AKIA5N475DMNK6CNSGAL
             region: us-west-2
             secretAccessKeySecretRef:
               name: route53-secret

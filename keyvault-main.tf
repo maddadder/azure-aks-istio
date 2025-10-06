@@ -10,15 +10,15 @@ resource "azurerm_key_vault" "leenet-keyvault" {
   name                = "${var.region}-${var.environment}-${var.app_name}-kv"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  
+
   enabled_for_deployment          = var.kv-enabled-for-deployment
   enabled_for_disk_encryption     = var.kv-enabled-for-disk-encryption
   enabled_for_template_deployment = var.kv-enabled-for-template-deployment
   tenant_id                       = data.azurerm_client_config.current.tenant_id
 
   sku_name = var.kv-sku-name
-  
-  tags = { 
+
+  tags = {
     environment = var.environment
   }
 
