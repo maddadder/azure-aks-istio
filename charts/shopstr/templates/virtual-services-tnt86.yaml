@@ -10,12 +10,9 @@ spec:
   http:
   - match:
     - uri:
-        prefix: "/" #or prefix
-    rewrite:
-      uri: "/"
-      authority: shopstr.market
+        prefix: /
     route:
-      - destination:
-          host: shopstr.market
-          port:
-            number: 443
+    - destination:
+        host: shopstr.default.svc.cluster.local
+        port:
+          number: 3000

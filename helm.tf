@@ -21,3 +21,11 @@ resource "helm_release" "leenet-ingress" {
   chart      = "${abspath(path.root)}/charts/leenet-ingress"
   depends_on = [module.cert_manager, kubernetes_secret.istio-system-route53-secret]
 }
+
+
+resource "helm_release" "shopstr" {
+  namespace  = "default"
+  name       = "shopstr"
+  chart      = "${abspath(path.root)}/charts/shopstr"
+  depends_on = [module.cert_manager, kubernetes_secret.istio-system-route53-secret]
+}

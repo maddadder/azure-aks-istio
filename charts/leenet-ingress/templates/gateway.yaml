@@ -26,7 +26,7 @@ spec:
       mode: SIMPLE
       credentialName: leenet-link-route53-dns-tls
   - hosts:
-    - "tnt96.com"
+    - "tnt86.com"
     - "*.tnt86.com"
     port:
       number: 443
