@@ -29,3 +29,11 @@ resource "helm_release" "shopstr" {
   chart      = "${abspath(path.root)}/charts/shopstr"
   depends_on = [module.cert_manager, kubernetes_secret.istio-system-route53-secret]
 }
+
+
+resource "helm_release" "nostr-rs-relay" {
+  namespace  = "default"
+  name       = "nostr-rs-relay"
+  chart      = "${abspath(path.root)}/charts/nostr-rs-relay"
+  depends_on = [module.cert_manager, kubernetes_secret.istio-system-route53-secret]
+}
